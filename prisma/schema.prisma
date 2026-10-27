@@ -1,0 +1,900 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model User {
+  id        String   @id @default(uuid())
+  username  String   @unique
+  email     String   @unique
+  password  String?
+  firstName String?
+  lastName  String?
+  role      Role     @default(USER)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  // Keycloak (auth.gotravelnha.com) user id, the token `sub`. Login looks users up by this.
+  keycloakId    String?  @unique
+
+  // OAuth fields
+  provider      String?  // google, auth0, etc
+  providerId    String?  // OAuth provider's user ID
+  providerImage String?  // Profile image from OAuth provider
+  
+  // Password reset fields
+  resetToken        String?
+  resetTokenExpires DateTime?
+  
+  // Relations
+  bookings      Booking[]
+  loyaltyPoints LoyaltyPoint[]
+  referrals     Referral[]      @relation("Referrer")
+  referredBy    Referral?       @relation("Referee")
+  travellers    Traveller[]
+  trips         Trip[]
+  attractionBookings AttractionsgBooking[]
+  travelerProfile    TravelerProfile?
+  savedTrips         SavedTrip[]
+  following          Follow[]
+  tripComments       TripComment[]
+  contentReports     ContentReport[]
+  
+  @@unique([provider, providerId], name: "provider_unique")
+  @@map("users")
+}
+
+model Booking {
+  id          String   @id @default(uuid())
+  userId      String
+  platform    String   // trip, klook, attractionsg
+  bookingType String   // hotel, flight, activity
+  bookingData Json?
+  status      String   // pending, confirmed, cancelled
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@map("bookings")
+}
+
+model LoyaltyPoint {
+  id          String   @id @default(uuid())
+  userId      String
+  points      Int
+  reason      String?
+  createdAt   DateTime @default(now())
+  
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@map("loyalty_points")
+}
+
+model Referral {
+  id              String   @id @default(uuid())
+  referrerId      String   // User who shared the referral
+  refereeId       String?  @unique // User who signed up via referral (nullable until they sign up) - unique so one user can only use one referral
+  referralCode    String   @unique // Unique code for sharing
+  email           String?  // Email of person who clicked referral (before signup)
+  status          ReferralStatus @default(PENDING) // PENDING, SIGNED_UP, COMPLETED_BOOKING, REWARDED
+  rewardPoints    Int      @default(0) // Points given to referrer
+  signupAt        DateTime?
+  firstBookingAt  DateTime?
+  rewardedAt      DateTime?
+  metadata        Json?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  referrer User @relation("Referrer", fields: [referrerId], references: [id], onDelete: Cascade)
+  referee  User? @relation("Referee", fields: [refereeId], references: [id], onDelete: SetNull)
+  
+  @@index([referralCode])
+  @@index([referrerId])
+  @@index([status])
+  @@map("referrals")
+}
+
+enum ReferralStatus {
+  PENDING            // Link clicked but user not signed up yet
+  SIGNED_UP          // User signed up via referral
+  COMPLETED_BOOKING  // User made their first booking
+  REWARDED           // Points rewarded to referrer
+}
+
+model NewsletterSubscriber {
+  id            String   @id @default(uuid())
+  email         String   @unique
+  name          String?
+  source        String?  // homepage, deals, blog, etc
+  isActive      Boolean  @default(true)
+  subscribedAt  DateTime @default(now())
+  unsubscribedAt DateTime?
+  metadata      Json?
+  
+  @@map("newsletter_subscribers")
+}
+
+model BlogPost {
+  id          String   @id @default(uuid())
+  title       String
+  slug        String   @unique
+  excerpt     String?
+  content     String   // Markdown or HTML
+  authorId    String
+  category    String?
+  tags        String[]
+  featuredImage String?
+  isPublished Boolean  @default(false)
+  publishedAt DateTime?
+  views       Int      @default(0)
+  seoMeta     Json?    // SEO metadata
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  @@index([slug])
+  @@index([category])
+  @@index([isPublished])
+  @@map("blog_posts")
+}
+
+model AttractionsgEvent {
+  id                   String   @id @default(uuid()) @db.Uuid
+  title                String
+  slug                 String?
+  description          String?
+  priceText            String?
+  priceAmount          Float?
+  resellerPriceAmount  Float?
+  originalPriceText    String?
+  originalPriceAmount  Float?
+  publicPrice          Float?
+  image                String?
+  category             String?
+  location             String?
+  rating               Float?
+  link                 String? @unique
+  duration             String?
+  ageRestriction       String?
+  cancellation         String?
+  validFrom            String?
+  validTo              String?
+  lastSeenAt           DateTime @default(now())
+  isActive             Boolean  @default(true)
+  isPublished          Boolean  @default(false)
+  publishedAt          DateTime?
+  notes                String?
+  isSelfBookable       Boolean  @default(false)
+  stripePriceId        String?
+  checkoutNotes        String?
+  bookings             AttractionsgBooking[]
+  raw                  Json?
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  @@map("attractionsg_events")
+  @@index([category])
+  @@index([isActive])
+  @@index([isPublished])
+  @@index([slug])
+  @@index([isActive, isPublished])
+  @@index([title])
+}
+
+model UserActivity {
+  id             String   @id @default(cuid())
+  sessionId      String
+  timestamp      DateTime
+  page           String
+  action         String
+  data           Json?
+  userAgent      String?
+  viewportWidth  Int?
+  viewportHeight Int?
+  createdAt      DateTime @default(now())
+
+  @@map("user_activities")
+  @@index([timestamp])
+  @@index([page])
+  @@index([action])
+  @@index([sessionId])
+}
+
+model AffiliateEntity {
+  id        String   @id @default(uuid())
+  slug      String   @unique
+  title     String
+  location  String?
+  category  String?
+  status    String   @default("active") // active, archived, draft
+  metadata  Json?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  offers AffiliateOffer[]
+  clicks AffiliateClickEvent[]
+
+  @@index([status])
+  @@index([location])
+  @@index([category])
+  @@map("affiliate_entities")
+}
+
+model AffiliateOffer {
+  id                 String   @id @default(uuid())
+  entityId           String
+  provider           String   // trip, klook
+  providerProductId  String?
+  baseUrl            String
+  affiliateUrl       String?
+  priceAmount        Float?
+  currency           String?  @default("SGD")
+  priceText          String?
+  score              Float?   @default(0)
+  availabilityStatus String   @default("available") // available, stale, missing
+  lastVerifiedAt     DateTime?
+  expiresAt          DateTime?
+  isActive           Boolean  @default(true)
+  metadata           Json?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  entity AffiliateEntity       @relation(fields: [entityId], references: [id], onDelete: Cascade)
+  clicks AffiliateClickEvent[]
+
+  @@index([entityId, isActive])
+  @@index([provider, isActive])
+  @@index([availabilityStatus])
+  @@index([lastVerifiedAt])
+  @@map("affiliate_offers")
+}
+
+model AffiliatePlacement {
+  id        String   @id @default(uuid())
+  key       String   @unique // search_card_primary, detail_sticky, etc
+  label     String
+  isActive  Boolean  @default(true)
+  metadata  Json?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  clicks AffiliateClickEvent[]
+
+  @@index([isActive])
+  @@map("affiliate_placements")
+}
+
+model AffiliateClickEvent {
+  id           String   @id @default(uuid())
+  sessionId    String
+  userId       String?
+  entityId     String?
+  offerId      String?
+  provider     String
+  placementKey String?
+  placementId  String?
+  pagePath     String?
+  referrer     String?
+  deviceType   String? // desktop, mobile, tablet, unknown
+  subId        String?
+  outboundUrl  String
+  metadata     Json?
+  createdAt    DateTime @default(now())
+
+  entity    AffiliateEntity?    @relation(fields: [entityId], references: [id], onDelete: SetNull)
+  offer     AffiliateOffer?     @relation(fields: [offerId], references: [id], onDelete: SetNull)
+  placement AffiliatePlacement? @relation(fields: [placementId], references: [id], onDelete: SetNull)
+
+  @@index([sessionId])
+  @@index([provider])
+  @@index([subId])
+  @@index([entityId])
+  @@index([offerId])
+  @@index([placementKey])
+  @@index([createdAt])
+  @@map("affiliate_click_events")
+}
+
+model AffiliateConversionEvent {
+  id         String    @id @default(uuid())
+  provider   String
+  subId      String
+  // Partner order id; with provider, makes imports and postbacks idempotent
+  orderId    String?
+  saleAmount Float?
+  commission Float?
+  currency   String?   @default("USD")
+  status     String?   // pending, approved, rejected
+  occurredAt DateTime?
+  rawPayload Json?
+  createdAt  DateTime  @default(now())
+
+  @@unique([provider, orderId])
+  @@index([provider, subId])
+  @@index([createdAt])
+  @@map("affiliate_conversion_events")
+}
+
+model AttractionsgBooking {
+  id                    String         @id @default(cuid())
+  eventId               String         @db.Uuid
+  eventTitle            String
+  eventSlug             String?
+  quantity              Int            @default(1)
+  adultCount            Int            @default(0)
+  childCount            Int            @default(0)
+  amount                Float
+  unitPrice             Float?
+  resellerCost          Float?
+  stripeFeeAmount       Float?
+  netRevenue            Float?
+  currency              String         @default("SGD")
+  status                BookingStatus  @default(PENDING)
+  stripeSessionId       String         @unique
+  stripePaymentIntentId String?
+  customerEmail         String?
+  customerName          String?
+  customerPhone         String?
+  optionCode            String?
+  optionName            String?
+  metadata              Json?
+  notes                 String?
+  supplierOrderId       String?
+  supplierStatus        String?
+  supplierPayload       Json?
+  cart                  Json?
+  paidAt                DateTime?
+  refundedAmount        Float?
+  refundedAt            DateTime?
+  // Customer-facing reference, e.g. GTN-7K3QX9MA
+  reference             String?        @unique
+  // Set when the customer was signed in at checkout, or we created their account
+  userId                String?
+  // Ticket delivery
+  voucherUrl            String?
+  voucherNote           String?
+  // Idempotency for post-payment steps, so webhook retries resume where they stopped
+  opsNotifiedAt         DateTime?
+  confirmationSentAt    DateTime?
+  ticketSentAt          DateTime?
+  // Stripe promotion code discount, in major units
+  discountAmount        Float?
+  // Funnel and acquisition
+  sessionId             String?
+  attribution           Json?
+  createdAt             DateTime       @default(now())
+  updatedAt             DateTime       @updatedAt
+
+  event AttractionsgEvent @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  user  User?             @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([eventId])
+  @@index([status])
+  @@index([supplierStatus])
+  @@index([userId])
+  @@index([sessionId])
+  @@map("attractionsg_bookings")
+}
+
+enum BookingStatus {
+  PENDING
+  PAID
+  FAILED
+  CANCELLED
+  REFUNDED
+}
+
+model PriceAlert {
+  id            String   @id @default(uuid())
+  userId        String
+  platform      String   // trip, klook, attractionsg
+  productType   String   // hotel, flight, activity
+  productId     String   // ID or URL of the product
+  productName   String
+  currentPrice  Float?
+  targetPrice   Float?   // Alert when price drops to this
+  originalUrl   String
+  isActive      Boolean  @default(true)
+  triggeredAt   DateTime?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  
+  @@index([userId])
+  @@index([platform, productType])
+  @@index([isActive])
+  @@map("price_alerts")
+}
+
+model ScraperJob {
+  id          String         @id @default(uuid())
+  platform    String         // trip, klook, attractionsg
+  sourceUrl   String         // The URL being scraped
+  jobType     String         // event, deal, promotion
+  status      ScraperStatus  @default(PENDING)
+  priority    Int            @default(0) // Higher = more priority
+  startedAt   DateTime?
+  completedAt DateTime?
+  error       String?
+  metadata    Json?
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+  
+  // Relations
+  source    ScraperSource    @relation(fields: [sourceUrl], references: [url], onDelete: Cascade)
+  dataItems TripScrapedData[]
+  
+  @@map("scraper_jobs")
+}
+
+model ScraperSource {
+  url           String        @id // Unique URL
+  platform      String        // trip, klook, attractionsg
+  sourceType    String        // affiliate_link, search_url, promotion_page
+  isActive      Boolean       @default(true)
+  lastScrapedAt DateTime?
+  scrapeCount   Int           @default(0)
+  metadata      Json?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  
+  // Relations
+  jobs ScraperJob[]
+  
+  @@map("scraper_sources")
+}
+
+model TripScrapedData {
+  id                String      @id @default(uuid())
+  jobId             String
+  title             String
+  description       String?
+  originalPrice     Decimal?
+  discountedPrice   Decimal?
+  discount          String?
+  currency          String?
+  image             String?
+  affiliateLink     String?
+  location          String?
+  dates             String?
+  category          String?
+  metadata          Json?
+  isValid           Boolean     @default(true)
+  duplicateOf       String?     // ID of duplicate if this is a duplicate
+  createdAt         DateTime    @default(now())
+  updatedAt         DateTime    @updatedAt
+  
+  // Relations
+  job ScraperJob @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  
+  @@index([jobId])
+  @@index([category])
+  @@index([isValid])
+  @@map("trip_scraped_data")
+}
+
+model KlookPromoCode {
+  id                        String   @id @default(uuid())
+  promoCode                 String   @unique // e.g., DLTCAL8
+  discountDescription       String   // e.g., 8% off
+  promoCodeDescription      String   // Full description
+  affiliateDescription      String   // Affiliate version
+  applicablePlatforms       String   // All platforms, App only, etc
+  redeemFrom                DateTime
+  redeemBefore              DateTime
+  validUntil                DateTime
+  timeZone                  String
+  termsAndConditions        String   @db.Text
+  applicableToResidentsOf   String?  // Country codes separated by ;
+  notApplicableToResidentsOf String? // Country codes
+  nonApplicableActivitiesUrl String? // URL
+  
+  // Status tracking
+  isActive                  Boolean  @default(true)
+  importedAt                DateTime @default(now())
+  updatedAt                 DateTime @updatedAt
+  
+  @@index([promoCode])
+  @@index([isActive])
+  @@index([validUntil])
+  @@map("klook_promo_codes")
+}
+
+model KlookHotelDeal {
+  id                String   @id @default(uuid())
+  hotelId           String   @unique // Master hotel ID from Klook
+  hotelName         String
+  dealCategory      String   // Big sale, Bestseller, etc
+  starRating        Int?
+  
+  // Pricing
+  originalPrice     Decimal  // Sell price
+  discountedPrice   Decimal  // Deal price
+  currency          String   @default("USD")
+  savings           Decimal
+  savingsPercent    Decimal? // Auto-calculated
+  
+  // Links
+  affiliateLink     String
+  
+  // Metadata
+  importedAt        DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  isActive          Boolean  @default(true)
+  
+  @@index([hotelId])
+  @@index([dealCategory])
+  @@index([isActive])
+  @@index([updatedAt])
+  @@map("klook_hotel_deals")
+}
+
+model KlookWidget {
+  id            String   @id @default(uuid())
+  adId          String   // Ad ID from Klook portal (one per category)
+  name          String
+  description   String
+  icon          String
+  category      String?
+  widgetType    String   @default("things_to_do") // things_to_do or hotels
+  isActive      Boolean  @default(true)
+  displayOrder  Int      @default(0)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  
+  @@unique([name])
+  @@index([isActive])
+  @@index([displayOrder])
+  @@index([widgetType])
+  @@map("klook_widgets")
+}
+
+model DataComparison {
+  id             String   @id @default(uuid())
+  title          String
+  platform1      String   // trip
+  platform2      String   // klook, attractionsg, etc
+  price1         Decimal
+  price2         Decimal
+  currency       String
+  savingsPercent Decimal?
+  metadata       Json?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  
+  @@index([title])
+  @@map("data_comparisons")
+}
+
+model DealTemplate {
+  id               String   @id @default(uuid())
+  slug             String   @unique
+  title            String
+  description      String
+  destination      String
+  heroImage        String
+  heroImageSource  String?  @default("manual")
+  heroImageFetchedAt DateTime?
+  badge            String
+  category         String
+  lastUpdatedLabel String
+  primaryProvider  String
+  primaryCtaLabel  String
+  primaryBaseUrl   String
+  placementKey     String
+  summaryBullets   Json
+  tips             Json
+  comparison       Json
+  isActive         Boolean  @default(true)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@index([isActive, updatedAt])
+  @@index([slug, isActive])
+  @@index([placementKey])
+  @@map("deal_templates")
+}
+
+enum Role {
+  ADMIN
+  USER
+}
+
+enum ScraperStatus {
+  PENDING
+  RUNNING
+  COMPLETED
+  FAILED
+  CANCELLED
+}
+
+// Family members a user plans trips for. Age is derived from birthDate at trip time.
+model Traveller {
+  id        String    @id @default(uuid())
+  userId    String
+  name      String
+  relation  String?   // self, partner, child, grandparent, other
+  birthDate DateTime? @db.Date
+  notes     String?   // dietary, mobility, interests
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("travellers")
+}
+
+// A saved trip. The itinerary holds catalogue ids only; prices and availability
+// are read from the supplier tables whenever the trip is shown.
+model Trip {
+  id           String   @id @default(uuid())
+  userId       String
+  generationId String?  @unique
+  title        String
+  destination  String
+  startDate    DateTime @db.Date
+  endDate      DateTime @db.Date
+  budget       Float?
+  currency     String   @default("SGD")
+  party        Json     // [{ name, age }] at planning time
+  preferences  Json?
+  itinerary    Json
+  // Random public link code. Null means the trip is private; clearing it revokes old links.
+  shareId      String?  @unique
+  // Community trip this one was customized from, kept for attribution
+  adaptedFromId String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  user        User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  adaptedFrom PublishedTrip? @relation("AdaptedTrips", fields: [adaptedFromId], references: [id], onDelete: SetNull)
+  published   PublishedTrip? @relation("PublishedFrom")
+
+  @@index([userId])
+  @@index([adaptedFromId])
+  @@map("trips")
+}
+
+// One AI itinerary request. Used for rate limiting, cost tracking and for saving a
+// guest's itinerary after they sign in.
+model ItineraryGeneration {
+  id           String   @id @default(uuid())
+  userId       String?
+  clientKey    String   // user id, or a salted hash of the guest's IP
+  destination  String
+  request      Json
+  itinerary    Json?
+  model        String
+  status       String   // SUCCESS, REFUSED, FAILED
+  inputTokens  Int?
+  outputTokens Int?
+  // Community trip used as the starting plan ("Customize with AI")
+  sourceTripId String?
+  createdAt    DateTime @default(now())
+
+  sourceTrip PublishedTrip? @relation(fields: [sourceTripId], references: [id], onDelete: SetNull)
+
+  @@index([clientKey, createdAt])
+  @@index([createdAt])
+  @@index([sourceTripId])
+  @@map("itinerary_generations")
+}
+
+
+// Messages from the contact form. Stored so a failed email doesn't lose them.
+model ContactMessage {
+  id        String    @id @default(uuid())
+  name      String
+  email     String
+  message   String
+  // Booking reference the customer quoted, if any
+  reference String?
+  userId    String?
+  emailedAt DateTime?
+  handledAt DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([createdAt])
+  @@index([handledAt])
+  @@map("contact_messages")
+}
+
+// ---------------------------------------------------------------------------
+// Community. Public identity and published itineraries live here, apart from
+// login identity (User) and private trips (Trip). See docs/social-community-roadmap.md.
+
+enum TripVisibility {
+  PRIVATE // author only
+  UNLISTED // anyone with the link; never indexed or listed
+  PUBLIC // listed, indexed, in the sitemap
+}
+
+// Moderation state, separate from visibility so an author cannot undo a hide
+enum ContentStatus {
+  ACTIVE
+  HIDDEN // hidden by a moderator; author still sees it
+  REMOVED // deleted by the author or a moderator; content cleared
+}
+
+enum CommentKind {
+  TIP
+  QUESTION
+}
+
+enum ReportTarget {
+  TRIP
+  COMMENT
+  PROFILE
+}
+
+enum ReportStatus {
+  OPEN
+  ACTIONED
+  DISMISSED
+}
+
+// A user's public face in the community. Created the first time they publish,
+// comment or edit their profile. The handle is chosen by the user and is never
+// derived from the email (User.username can be the email's local part).
+model TravelerProfile {
+  userId               String        @id
+  // Lowercase a-z, 0-9, _; 3-30 chars (CHECK constraint in the migration)
+  handle               String        @unique
+  displayName          String
+  bio                  String?
+  avatarUrl            String?
+  favoriteDestinations String[]
+  // Country only. Never a city or address.
+  homeCountry          String?
+  showSavedTrips       Boolean       @default(false)
+  status               ContentStatus @default(ACTIVE)
+  createdAt            DateTime      @default(now())
+  updatedAt            DateTime      @updatedAt
+
+  user      User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  trips     PublishedTrip[]
+  followers Follow[]
+
+  @@map("traveler_profiles")
+}
+
+// A sanitized snapshot of a trip, made at publish time. Editing the private Trip
+// does not change this until the author republishes. Holds no names, exact dates
+// or budget amounts.
+model PublishedTrip {
+  id             String         @id @default(uuid())
+  slug           String         @unique
+  authorId       String
+  // Private trip it was published from. One published version per trip.
+  sourceTripId   String?        @unique
+  // Community trip this was adapted from (lineage for attribution)
+  parentId       String?
+  visibility     TripVisibility @default(PRIVATE)
+  status         ContentStatus  @default(ACTIVE)
+  title          String
+  description    String?
+  // English city name, as the planner stores it
+  destination    String
+  country        String?
+  durationDays   Int
+  // Month of travel (1-12), optional. Never exact dates.
+  travelMonth    Int?
+  // relaxed, balanced, packed
+  travelStyle    String?
+  // budget, mid, premium: a level, not an amount
+  budgetLevel    String?
+  familyFriendly Boolean        @default(false)
+  // Opt-in: "0-2", "3-5", "6-12", "13-17"
+  childAgeBands  String[]
+  // Itinerary with days as Day 1..N (date fields removed)
+  itinerary      Json
+  tips           String[]
+  coverImage     String?
+  // Kept in step with their tables inside the same transaction
+  saveCount      Int            @default(0)
+  commentCount   Int            @default(0)
+  adaptCount     Int            @default(0)
+  // First time it became PUBLIC. Feeds sort on this.
+  publishedAt    DateTime?
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  author       TravelerProfile       @relation(fields: [authorId], references: [userId], onDelete: Cascade)
+  sourceTrip   Trip?                 @relation("PublishedFrom", fields: [sourceTripId], references: [id], onDelete: SetNull)
+  parent       PublishedTrip?        @relation("Lineage", fields: [parentId], references: [id], onDelete: SetNull)
+  children     PublishedTrip[]       @relation("Lineage")
+  adaptedTrips Trip[]                @relation("AdaptedTrips")
+  generations  ItineraryGeneration[]
+  saves        SavedTrip[]
+  comments     TripComment[]
+
+  @@index([visibility, status, publishedAt(sort: Desc)])
+  @@index([visibility, status, saveCount(sort: Desc)])
+  @@index([destination, visibility, status])
+  @@index([country, visibility, status])
+  @@index([authorId, visibility, status])
+  @@index([parentId])
+  @@map("published_trips")
+}
+
+model SavedTrip {
+  userId    String
+  tripId    String
+  createdAt DateTime @default(now())
+
+  user User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  trip PublishedTrip @relation(fields: [tripId], references: [id], onDelete: Cascade)
+
+  // One save per user and trip
+  @@id([userId, tripId])
+  @@index([userId, createdAt(sort: Desc)])
+  @@index([tripId])
+  @@map("saved_trips")
+}
+
+// Any signed-in user can follow a creator; following does not need a public profile
+model Follow {
+  followerId String
+  followeeId String
+  createdAt  DateTime @default(now())
+
+  follower User            @relation(fields: [followerId], references: [id], onDelete: Cascade)
+  followee TravelerProfile @relation(fields: [followeeId], references: [userId], onDelete: Cascade)
+
+  @@id([followerId, followeeId])
+  @@index([followeeId, createdAt(sort: Desc)])
+  @@map("follows")
+}
+
+model TripComment {
+  id        String        @id @default(uuid())
+  tripId    String
+  // Null once the author's account is deleted; shown as "deleted user"
+  authorId  String?
+  // Plain text, rendered escaped
+  body      String
+  kind      CommentKind   @default(TIP)
+  status    ContentStatus @default(ACTIVE)
+  editedAt  DateTime?
+  createdAt DateTime      @default(now())
+
+  trip   PublishedTrip @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  author User?         @relation(fields: [authorId], references: [id], onDelete: SetNull)
+
+  @@index([tripId, status, createdAt(sort: Desc)])
+  @@index([authorId, createdAt])
+  @@map("trip_comments")
+}
+
+// targetId points at a PublishedTrip, TripComment or TravelerProfile by targetType,
+// so it has no foreign key
+model ContentReport {
+  id         String       @id @default(uuid())
+  reporterId String?
+  targetType ReportTarget
+  targetId   String
+  // spam, unsafe, personal_info, offensive, other
+  reason     String
+  note       String?
+  status     ReportStatus @default(OPEN)
+  resolvedBy String?
+  resolvedAt DateTime?
+  createdAt  DateTime     @default(now())
+
+  reporter User? @relation(fields: [reporterId], references: [id], onDelete: SetNull)
+
+  // One report per user and target
+  @@unique([reporterId, targetType, targetId])
+  @@index([status, createdAt])
+  @@index([targetType, targetId])
+  @@map("content_reports")
+}

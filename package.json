@@ -1,0 +1,58 @@
+{
+    "name": "gotravelnha-api",
+    "private": true,
+    "scripts": {
+        "build": "nest build",
+        "start": "node dist/main.js",
+        "start:dev": "nest start --watch",
+        "dev": "nest start --watch",
+        "typecheck": "tsc --noEmit -p tsconfig.json",
+        "postinstall": "prisma generate",
+        "vercel-build": "prisma generate && prisma migrate deploy && nest build",
+        "test": "tsx --test test/*.test.ts",
+        "test:affiliate": "tsx --test test/affiliate-handoff.test.ts",
+        "users:migrate-to-keycloak": "tsx scripts/migrate-users-to-keycloak.ts",
+        "video:install": "playwright install chromium",
+        "video:typecheck": "tsc --noEmit -p src/videos/studio/tsconfig.json",
+        "video:capture": "VIDEO_STUDIO_DATA_DIR=${VIDEO_STUDIO_DATA_DIR:-storage/video-studio} tsx src/videos/studio/src/capture.ts",
+        "video:voice": "VIDEO_STUDIO_DATA_DIR=${VIDEO_STUDIO_DATA_DIR:-storage/video-studio} tsx src/videos/studio/src/voice.ts",
+        "video:render": "VIDEO_STUDIO_DATA_DIR=${VIDEO_STUDIO_DATA_DIR:-storage/video-studio} tsx src/videos/studio/src/render.ts",
+        "video:validate": "VIDEO_STUDIO_DATA_DIR=${VIDEO_STUDIO_DATA_DIR:-storage/video-studio} tsx src/videos/studio/src/validate.ts",
+        "video:all": "npm run video:capture && npm run video:voice && npm run video:render && npm run video:validate"
+    },
+    "prisma": {
+        "seed": "tsx prisma/seed.ts"
+    },
+    "dependencies": {
+        "@anthropic-ai/sdk": "^0.133.0",
+        "@nestjs/common": "^11.1.6",
+        "@nestjs/core": "^11.1.6",
+        "@nestjs/platform-express": "^11.1.6",
+        "@nestjs/swagger": "^11.2.0",
+        "@nestjs/terminus": "^11.0.0",
+        "@prisma/client": "^5.19.1",
+        "bcrypt": "^6.0.0",
+        "cookie-parser": "^1.4.7",
+        "dotenv": "^16.4.5",
+        "jose": "^5.10.0",
+        "nodemailer": "^6.10.1",
+        "ofetch": "^1.4.1",
+        "papaparse": "^5.5.3",
+        "playwright": "1.56.1",
+        "reflect-metadata": "^0.2.2",
+        "rxjs": "^7.8.2",
+        "tsx": "^4.20.6",
+        "zod": "^3.25.76"
+    },
+    "devDependencies": {
+        "@nestjs/cli": "^11.0.10",
+        "@types/bcrypt": "^6.0.0",
+        "@types/cookie-parser": "^1.4.9",
+        "@types/express": "^5.0.3",
+        "@types/node": "^22.20.5",
+        "@types/nodemailer": "^7.0.3",
+        "@types/papaparse": "^5.3.16",
+        "prisma": "^5.19.1",
+        "typescript": "~5.9.3"
+    }
+}

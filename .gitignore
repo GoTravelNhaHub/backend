@@ -1,0 +1,25 @@
+# Build output
+dist
+
+# Dependencies
+node_modules
+
+# Crawler disk cache (AttractionsSG), recreated at runtime
+data
+
+# Logs
+logs
+*.log
+
+# Misc
+.DS_Store
+.idea
+.vercel
+
+# Env files
+.env
+.env.*
+!.env.example
+
+# Video studio renders (large; regenerate with the pipeline)
+storage

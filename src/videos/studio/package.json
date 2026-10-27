@@ -1,0 +1,6 @@
+{
+  "name": "gotravelnha-video-studio",
+  "private": true,
+  "type": "module",
+  "description": "Video pipeline stages (ESM). Run by the backend videos module as child processes with tsx; dependencies come from backend/package.json."
+}
