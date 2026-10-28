@@ -18,6 +18,18 @@ export async function createApp() {
   app.useBodyParser('text', { type: 'text/plain', limit: '64kb' })
   app.useBodyParser('json', { limit: '5mb' })
 
+  // Public GETs (community feed, ...) are cached by Vercel's CDN. cors only adds `Vary: Origin` when a
+  // request has an Origin, so a copy cached from a server-side fetch (no Origin, no CORS headers) was
+  // served to browsers and blocked. Always vary on Origin so each origin gets its own cached copy.
+  // Most responses depend on the session cookie (/api/auth/me, ...), so nothing is cached unless a
+  // handler opts in (public feeds set their own cache-control). A browser-cached /api/auth/me fetched
+  // from www was otherwise revalidated and reused for admin, with www's Access-Control-Allow-Origin.
+  app.use((_req: unknown, res: { vary: (field: string) => void; setHeader: (name: string, value: string) => void }, next: () => void) => {
+    res.vary('Origin')
+    res.setHeader('cache-control', 'private, no-store')
+    next()
+  })
+
   // www.gotravelnha.com and admin.gotravelnha.com call this API with the session cookie
   app.enableCors({
     origin: (origin, callback) => callback(null, isAllowedOrigin(origin) ? origin : false),
