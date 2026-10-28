@@ -73,9 +73,9 @@ export async function subscribe(event: HttpEvent) {
         subject: 'Welcome to GoTravelNha',
         html: `
           <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; color: #334155;">
-            <h1 style="color: #101D3A;">Welcome to GoTravelNha</h1>
+            <h1 style="color: #0A1024;">Welcome to GoTravelNha</h1>
             <p>Thanks for subscribing. We'll send you family trip ideas, school-holiday planning tips and the occasional partner offer from Trip.com or Klook.</p>
-            <p><a href="${escapeHtml(siteUrl)}/planner" style="color: #008A9B; font-weight: bold;">Plan a family trip with the AI Travel Agent</a></p>
+            <p><a href="${escapeHtml(siteUrl)}/planner" style="color: #0066E4; font-weight: bold;">Plan a family trip with the AI Travel Agent</a></p>
             <hr style="border: none; border-top: 1px solid #E2E8F0;">
             <p style="font-size: 12px; color: #64748B;">
               <a href="${escapeHtml(unsubscribeUrl)}" style="color: #64748B;">Unsubscribe</a>

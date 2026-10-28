@@ -3,6 +3,7 @@ import 'reflect-metadata'
 import { NestFactory } from '@nestjs/core'
 import type { NestExpressApplication } from '@nestjs/platform-express'
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger'
+import { SWAGGER_CSS } from './seo/brand'
 import cookieParser from 'cookie-parser'
 import { AppModule } from './app.module'
 import { isAllowedOrigin } from './common/allowed-origins'
@@ -39,7 +40,12 @@ export async function createApp() {
       .addBearerAuth({ type: 'http', scheme: 'bearer', bearerFormat: 'JWT', description: 'Keycloak access token (aud gotravelnha-api)' }, 'keycloak')
       .build()
   )
-  SwaggerModule.setup('docs', app, document, { jsonDocumentUrl: 'docs-json', customSiteTitle: 'GoTravelNha API' })
+  SwaggerModule.setup('docs', app, document, {
+    jsonDocumentUrl: 'docs-json',
+    customSiteTitle: 'GoTravelNha API',
+    customfavIcon: '/favicon.svg',
+    customCss: SWAGGER_CSS
+  })
 
   app.enableShutdownHooks()
   return app
