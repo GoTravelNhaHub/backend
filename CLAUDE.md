@@ -79,7 +79,7 @@ YouTube Shorts recorded from www (Playwright capture → TTS narration → FFmpe
 
 ## Removed on 2026-10-27
 
-AttractionsSG (catalogue, crawler, supplier automation), ticket checkout, Stripe, customer bookings, admin bookings and all scraper/crawl endpoints. cheerio and stripe are no longer dependencies; Playwright is back only for the video studio's capture stage. Their tables (`AttractionsgEvent`, `AttractionsgBooking`, `ScraperSource`, `ScraperJob`, `TripScrapedData`, ...) are still in `prisma/schema.prisma` and the database; dropping them needs a migration and an explicit decision. Plans saved with `sg:` catalogue ids resolve as "No longer listed".
+AttractionsSG (catalogue, crawler, supplier automation), ticket checkout, Stripe, customer bookings, admin bookings and all scraper/crawl endpoints. cheerio and stripe are no longer dependencies; Playwright is back only for the video studio's capture stage. Their tables (`AttractionsgEvent`, `AttractionsgBooking`, `ScraperSource`, `ScraperJob`, `TripScrapedData`, plus the unused `Booking`, `PriceAlert`, `DataComparison`) were dropped on 2026-10-28, when the migration history was squashed into `20261028000000_init` (old migrations are in `prisma/migrations_archive/`). Plans saved with `sg:` catalogue ids resolve as "No longer listed".
 
 ## Gotchas
 

@@ -6,7 +6,7 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
+  provider  = "postgresql"
   url       = env("DATABASE_URL")
   directUrl = env("DIRECT_URL")
 }
@@ -22,82 +22,65 @@ model User {
   isActive  Boolean  @default(true)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-  
+
   // Keycloak (auth.gotravelnha.com) user id, the token `sub`. Login looks users up by this.
-  keycloakId    String?  @unique
+  keycloakId String? @unique
 
   // OAuth fields
-  provider      String?  // google, auth0, etc
-  providerId    String?  // OAuth provider's user ID
-  providerImage String?  // Profile image from OAuth provider
-  
+  provider      String? // google, auth0, etc
+  providerId    String? // OAuth provider's user ID
+  providerImage String? // Profile image from OAuth provider
+
   // Password reset fields
   resetToken        String?
   resetTokenExpires DateTime?
-  
+
   // Relations
-  bookings      Booking[]
-  loyaltyPoints LoyaltyPoint[]
-  referrals     Referral[]      @relation("Referrer")
-  referredBy    Referral?       @relation("Referee")
-  travellers    Traveller[]
-  trips         Trip[]
-  attractionBookings AttractionsgBooking[]
-  travelerProfile    TravelerProfile?
-  savedTrips         SavedTrip[]
-  following          Follow[]
-  tripComments       TripComment[]
-  contentReports     ContentReport[]
-  
+  loyaltyPoints   LoyaltyPoint[]
+  referrals       Referral[]       @relation("Referrer")
+  referredBy      Referral?        @relation("Referee")
+  travellers      Traveller[]
+  trips           Trip[]
+  travelerProfile TravelerProfile?
+  savedTrips      SavedTrip[]
+  following       Follow[]
+  tripComments    TripComment[]
+  contentReports  ContentReport[]
+
   @@unique([provider, providerId], name: "provider_unique")
   @@map("users")
 }
 
-model Booking {
-  id          String   @id @default(uuid())
-  userId      String
-  platform    String   // trip, klook, attractionsg
-  bookingType String   // hotel, flight, activity
-  bookingData Json?
-  status      String   // pending, confirmed, cancelled
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
-  @@map("bookings")
-}
-
 model LoyaltyPoint {
-  id          String   @id @default(uuid())
-  userId      String
-  points      Int
-  reason      String?
-  createdAt   DateTime @default(now())
-  
+  id        String   @id @default(uuid())
+  userId    String
+  points    Int
+  reason    String?
+  createdAt DateTime @default(now())
+
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
+
   @@map("loyalty_points")
 }
 
 model Referral {
-  id              String   @id @default(uuid())
-  referrerId      String   // User who shared the referral
-  refereeId       String?  @unique // User who signed up via referral (nullable until they sign up) - unique so one user can only use one referral
-  referralCode    String   @unique // Unique code for sharing
-  email           String?  // Email of person who clicked referral (before signup)
-  status          ReferralStatus @default(PENDING) // PENDING, SIGNED_UP, COMPLETED_BOOKING, REWARDED
-  rewardPoints    Int      @default(0) // Points given to referrer
-  signupAt        DateTime?
-  firstBookingAt  DateTime?
-  rewardedAt      DateTime?
-  metadata        Json?
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-  
-  referrer User @relation("Referrer", fields: [referrerId], references: [id], onDelete: Cascade)
+  id             String         @id @default(uuid())
+  referrerId     String // User who shared the referral
+  refereeId      String?        @unique // User who signed up via referral (nullable until they sign up) - unique so one user can only use one referral
+  referralCode   String         @unique // Unique code for sharing
+  email          String? // Email of person who clicked referral (before signup)
+  status         ReferralStatus @default(PENDING) // PENDING, SIGNED_UP, COMPLETED_BOOKING, REWARDED
+  rewardPoints   Int            @default(0) // Points given to referrer
+  signupAt       DateTime?
+  firstBookingAt DateTime?
+  rewardedAt     DateTime?
+  metadata       Json?
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  referrer User  @relation("Referrer", fields: [referrerId], references: [id], onDelete: Cascade)
   referee  User? @relation("Referee", fields: [refereeId], references: [id], onDelete: SetNull)
-  
+
   @@index([referralCode])
   @@index([referrerId])
   @@index([status])
@@ -105,89 +88,46 @@ model Referral {
 }
 
 enum ReferralStatus {
-  PENDING            // Link clicked but user not signed up yet
-  SIGNED_UP          // User signed up via referral
-  COMPLETED_BOOKING  // User made their first booking
-  REWARDED           // Points rewarded to referrer
+  PENDING // Link clicked but user not signed up yet
+  SIGNED_UP // User signed up via referral
+  COMPLETED_BOOKING // User made their first booking
+  REWARDED // Points rewarded to referrer
 }
 
 model NewsletterSubscriber {
-  id            String   @id @default(uuid())
-  email         String   @unique
-  name          String?
-  source        String?  // homepage, deals, blog, etc
-  isActive      Boolean  @default(true)
-  subscribedAt  DateTime @default(now())
+  id             String    @id @default(uuid())
+  email          String    @unique
+  name           String?
+  source         String? // homepage, deals, blog, etc
+  isActive       Boolean   @default(true)
+  subscribedAt   DateTime  @default(now())
   unsubscribedAt DateTime?
-  metadata      Json?
-  
+  metadata       Json?
+
   @@map("newsletter_subscribers")
 }
 
 model BlogPost {
-  id          String   @id @default(uuid())
-  title       String
-  slug        String   @unique
-  excerpt     String?
-  content     String   // Markdown or HTML
-  authorId    String
-  category    String?
-  tags        String[]
+  id            String    @id @default(uuid())
+  title         String
+  slug          String    @unique
+  excerpt       String?
+  content       String // Markdown or HTML
+  authorId      String
+  category      String?
+  tags          String[]
   featuredImage String?
-  isPublished Boolean  @default(false)
-  publishedAt DateTime?
-  views       Int      @default(0)
-  seoMeta     Json?    // SEO metadata
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  
+  isPublished   Boolean   @default(false)
+  publishedAt   DateTime?
+  views         Int       @default(0)
+  seoMeta       Json? // SEO metadata
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
   @@index([slug])
   @@index([category])
   @@index([isPublished])
   @@map("blog_posts")
-}
-
-model AttractionsgEvent {
-  id                   String   @id @default(uuid()) @db.Uuid
-  title                String
-  slug                 String?
-  description          String?
-  priceText            String?
-  priceAmount          Float?
-  resellerPriceAmount  Float?
-  originalPriceText    String?
-  originalPriceAmount  Float?
-  publicPrice          Float?
-  image                String?
-  category             String?
-  location             String?
-  rating               Float?
-  link                 String? @unique
-  duration             String?
-  ageRestriction       String?
-  cancellation         String?
-  validFrom            String?
-  validTo              String?
-  lastSeenAt           DateTime @default(now())
-  isActive             Boolean  @default(true)
-  isPublished          Boolean  @default(false)
-  publishedAt          DateTime?
-  notes                String?
-  isSelfBookable       Boolean  @default(false)
-  stripePriceId        String?
-  checkoutNotes        String?
-  bookings             AttractionsgBooking[]
-  raw                  Json?
-  createdAt            DateTime @default(now())
-  updatedAt            DateTime @updatedAt
-
-  @@map("attractionsg_events")
-  @@index([category])
-  @@index([isActive])
-  @@index([isPublished])
-  @@index([slug])
-  @@index([isActive, isPublished])
-  @@index([title])
 }
 
 model UserActivity {
@@ -202,11 +142,11 @@ model UserActivity {
   viewportHeight Int?
   createdAt      DateTime @default(now())
 
-  @@map("user_activities")
   @@index([timestamp])
   @@index([page])
   @@index([action])
   @@index([sessionId])
+  @@map("user_activities")
 }
 
 model AffiliateEntity {
@@ -230,23 +170,23 @@ model AffiliateEntity {
 }
 
 model AffiliateOffer {
-  id                 String   @id @default(uuid())
+  id                 String    @id @default(uuid())
   entityId           String
-  provider           String   // trip, klook
+  provider           String // trip, klook
   providerProductId  String?
   baseUrl            String
   affiliateUrl       String?
   priceAmount        Float?
-  currency           String?  @default("SGD")
+  currency           String?   @default("SGD")
   priceText          String?
-  score              Float?   @default(0)
-  availabilityStatus String   @default("available") // available, stale, missing
+  score              Float?    @default(0)
+  availabilityStatus String    @default("available") // available, stale, missing
   lastVerifiedAt     DateTime?
   expiresAt          DateTime?
-  isActive           Boolean  @default(true)
+  isActive           Boolean   @default(true)
   metadata           Json?
-  createdAt          DateTime @default(now())
-  updatedAt          DateTime @updatedAt
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
 
   entity AffiliateEntity       @relation(fields: [entityId], references: [id], onDelete: Cascade)
   clicks AffiliateClickEvent[]
@@ -313,7 +253,7 @@ model AffiliateConversionEvent {
   saleAmount Float?
   commission Float?
   currency   String?   @default("USD")
-  status     String?   // pending, approved, rejected
+  status     String? // pending, approved, rejected
   occurredAt DateTime?
   rawPayload Json?
   createdAt  DateTime  @default(now())
@@ -324,184 +264,27 @@ model AffiliateConversionEvent {
   @@map("affiliate_conversion_events")
 }
 
-model AttractionsgBooking {
-  id                    String         @id @default(cuid())
-  eventId               String         @db.Uuid
-  eventTitle            String
-  eventSlug             String?
-  quantity              Int            @default(1)
-  adultCount            Int            @default(0)
-  childCount            Int            @default(0)
-  amount                Float
-  unitPrice             Float?
-  resellerCost          Float?
-  stripeFeeAmount       Float?
-  netRevenue            Float?
-  currency              String         @default("SGD")
-  status                BookingStatus  @default(PENDING)
-  stripeSessionId       String         @unique
-  stripePaymentIntentId String?
-  customerEmail         String?
-  customerName          String?
-  customerPhone         String?
-  optionCode            String?
-  optionName            String?
-  metadata              Json?
-  notes                 String?
-  supplierOrderId       String?
-  supplierStatus        String?
-  supplierPayload       Json?
-  cart                  Json?
-  paidAt                DateTime?
-  refundedAmount        Float?
-  refundedAt            DateTime?
-  // Customer-facing reference, e.g. GTN-7K3QX9MA
-  reference             String?        @unique
-  // Set when the customer was signed in at checkout, or we created their account
-  userId                String?
-  // Ticket delivery
-  voucherUrl            String?
-  voucherNote           String?
-  // Idempotency for post-payment steps, so webhook retries resume where they stopped
-  opsNotifiedAt         DateTime?
-  confirmationSentAt    DateTime?
-  ticketSentAt          DateTime?
-  // Stripe promotion code discount, in major units
-  discountAmount        Float?
-  // Funnel and acquisition
-  sessionId             String?
-  attribution           Json?
-  createdAt             DateTime       @default(now())
-  updatedAt             DateTime       @updatedAt
-
-  event AttractionsgEvent @relation(fields: [eventId], references: [id], onDelete: Cascade)
-  user  User?             @relation(fields: [userId], references: [id], onDelete: SetNull)
-
-  @@index([eventId])
-  @@index([status])
-  @@index([supplierStatus])
-  @@index([userId])
-  @@index([sessionId])
-  @@map("attractionsg_bookings")
-}
-
-enum BookingStatus {
-  PENDING
-  PAID
-  FAILED
-  CANCELLED
-  REFUNDED
-}
-
-model PriceAlert {
-  id            String   @id @default(uuid())
-  userId        String
-  platform      String   // trip, klook, attractionsg
-  productType   String   // hotel, flight, activity
-  productId     String   // ID or URL of the product
-  productName   String
-  currentPrice  Float?
-  targetPrice   Float?   // Alert when price drops to this
-  originalUrl   String
-  isActive      Boolean  @default(true)
-  triggeredAt   DateTime?
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-  
-  @@index([userId])
-  @@index([platform, productType])
-  @@index([isActive])
-  @@map("price_alerts")
-}
-
-model ScraperJob {
-  id          String         @id @default(uuid())
-  platform    String         // trip, klook, attractionsg
-  sourceUrl   String         // The URL being scraped
-  jobType     String         // event, deal, promotion
-  status      ScraperStatus  @default(PENDING)
-  priority    Int            @default(0) // Higher = more priority
-  startedAt   DateTime?
-  completedAt DateTime?
-  error       String?
-  metadata    Json?
-  createdAt   DateTime       @default(now())
-  updatedAt   DateTime       @updatedAt
-  
-  // Relations
-  source    ScraperSource    @relation(fields: [sourceUrl], references: [url], onDelete: Cascade)
-  dataItems TripScrapedData[]
-  
-  @@map("scraper_jobs")
-}
-
-model ScraperSource {
-  url           String        @id // Unique URL
-  platform      String        // trip, klook, attractionsg
-  sourceType    String        // affiliate_link, search_url, promotion_page
-  isActive      Boolean       @default(true)
-  lastScrapedAt DateTime?
-  scrapeCount   Int           @default(0)
-  metadata      Json?
-  createdAt     DateTime      @default(now())
-  updatedAt     DateTime      @updatedAt
-  
-  // Relations
-  jobs ScraperJob[]
-  
-  @@map("scraper_sources")
-}
-
-model TripScrapedData {
-  id                String      @id @default(uuid())
-  jobId             String
-  title             String
-  description       String?
-  originalPrice     Decimal?
-  discountedPrice   Decimal?
-  discount          String?
-  currency          String?
-  image             String?
-  affiliateLink     String?
-  location          String?
-  dates             String?
-  category          String?
-  metadata          Json?
-  isValid           Boolean     @default(true)
-  duplicateOf       String?     // ID of duplicate if this is a duplicate
-  createdAt         DateTime    @default(now())
-  updatedAt         DateTime    @updatedAt
-  
-  // Relations
-  job ScraperJob @relation(fields: [jobId], references: [id], onDelete: Cascade)
-  
-  @@index([jobId])
-  @@index([category])
-  @@index([isValid])
-  @@map("trip_scraped_data")
-}
-
 model KlookPromoCode {
-  id                        String   @id @default(uuid())
-  promoCode                 String   @unique // e.g., DLTCAL8
-  discountDescription       String   // e.g., 8% off
-  promoCodeDescription      String   // Full description
-  affiliateDescription      String   // Affiliate version
-  applicablePlatforms       String   // All platforms, App only, etc
-  redeemFrom                DateTime
-  redeemBefore              DateTime
-  validUntil                DateTime
-  timeZone                  String
-  termsAndConditions        String   @db.Text
-  applicableToResidentsOf   String?  // Country codes separated by ;
+  id                         String   @id @default(uuid())
+  promoCode                  String   @unique // e.g., DLTCAL8
+  discountDescription        String // e.g., 8% off
+  promoCodeDescription       String // Full description
+  affiliateDescription       String // Affiliate version
+  applicablePlatforms        String // All platforms, App only, etc
+  redeemFrom                 DateTime
+  redeemBefore               DateTime
+  validUntil                 DateTime
+  timeZone                   String
+  termsAndConditions         String   @db.Text
+  applicableToResidentsOf    String? // Country codes separated by ;
   notApplicableToResidentsOf String? // Country codes
   nonApplicableActivitiesUrl String? // URL
-  
+
   // Status tracking
-  isActive                  Boolean  @default(true)
-  importedAt                DateTime @default(now())
-  updatedAt                 DateTime @updatedAt
-  
+  isActive   Boolean  @default(true)
+  importedAt DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
   @@index([promoCode])
   @@index([isActive])
   @@index([validUntil])
@@ -509,27 +292,27 @@ model KlookPromoCode {
 }
 
 model KlookHotelDeal {
-  id                String   @id @default(uuid())
-  hotelId           String   @unique // Master hotel ID from Klook
-  hotelName         String
-  dealCategory      String   // Big sale, Bestseller, etc
-  starRating        Int?
-  
+  id           String @id @default(uuid())
+  hotelId      String @unique // Master hotel ID from Klook
+  hotelName    String
+  dealCategory String // Big sale, Bestseller, etc
+  starRating   Int?
+
   // Pricing
-  originalPrice     Decimal  // Sell price
-  discountedPrice   Decimal  // Deal price
-  currency          String   @default("USD")
-  savings           Decimal
-  savingsPercent    Decimal? // Auto-calculated
-  
+  originalPrice   Decimal // Sell price
+  discountedPrice Decimal // Deal price
+  currency        String   @default("USD")
+  savings         Decimal
+  savingsPercent  Decimal? // Auto-calculated
+
   // Links
-  affiliateLink     String
-  
+  affiliateLink String
+
   // Metadata
-  importedAt        DateTime @default(now())
-  updatedAt         DateTime @updatedAt
-  isActive          Boolean  @default(true)
-  
+  importedAt DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  isActive   Boolean  @default(true)
+
   @@index([hotelId])
   @@index([dealCategory])
   @@index([isActive])
@@ -538,18 +321,18 @@ model KlookHotelDeal {
 }
 
 model KlookWidget {
-  id            String   @id @default(uuid())
-  adId          String   // Ad ID from Klook portal (one per category)
-  name          String
-  description   String
-  icon          String
-  category      String?
-  widgetType    String   @default("things_to_do") // things_to_do or hotels
-  isActive      Boolean  @default(true)
-  displayOrder  Int      @default(0)
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-  
+  id           String   @id @default(uuid())
+  adId         String // Ad ID from Klook portal (one per category)
+  name         String
+  description  String
+  icon         String
+  category     String?
+  widgetType   String   @default("things_to_do") // things_to_do or hotels
+  isActive     Boolean  @default(true)
+  displayOrder Int      @default(0)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
   @@unique([name])
   @@index([isActive])
   @@index([displayOrder])
@@ -557,45 +340,28 @@ model KlookWidget {
   @@map("klook_widgets")
 }
 
-model DataComparison {
-  id             String   @id @default(uuid())
-  title          String
-  platform1      String   // trip
-  platform2      String   // klook, attractionsg, etc
-  price1         Decimal
-  price2         Decimal
-  currency       String
-  savingsPercent Decimal?
-  metadata       Json?
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
-  
-  @@index([title])
-  @@map("data_comparisons")
-}
-
 model DealTemplate {
-  id               String   @id @default(uuid())
-  slug             String   @unique
-  title            String
-  description      String
-  destination      String
-  heroImage        String
-  heroImageSource  String?  @default("manual")
+  id                 String    @id @default(uuid())
+  slug               String    @unique
+  title              String
+  description        String
+  destination        String
+  heroImage          String
+  heroImageSource    String?   @default("manual")
   heroImageFetchedAt DateTime?
-  badge            String
-  category         String
-  lastUpdatedLabel String
-  primaryProvider  String
-  primaryCtaLabel  String
-  primaryBaseUrl   String
-  placementKey     String
-  summaryBullets   Json
-  tips             Json
-  comparison       Json
-  isActive         Boolean  @default(true)
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
+  badge              String
+  category           String
+  lastUpdatedLabel   String
+  primaryProvider    String
+  primaryCtaLabel    String
+  primaryBaseUrl     String
+  placementKey       String
+  summaryBullets     Json
+  tips               Json
+  comparison         Json
+  isActive           Boolean   @default(true)
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
 
   @@index([isActive, updatedAt])
   @@index([slug, isActive])
@@ -608,22 +374,14 @@ enum Role {
   USER
 }
 
-enum ScraperStatus {
-  PENDING
-  RUNNING
-  COMPLETED
-  FAILED
-  CANCELLED
-}
-
 // Family members a user plans trips for. Age is derived from birthDate at trip time.
 model Traveller {
   id        String    @id @default(uuid())
   userId    String
   name      String
-  relation  String?   // self, partner, child, grandparent, other
+  relation  String? // self, partner, child, grandparent, other
   birthDate DateTime? @db.Date
-  notes     String?   // dietary, mobility, interests
+  notes     String? // dietary, mobility, interests
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
 
@@ -636,24 +394,24 @@ model Traveller {
 // A saved trip. The itinerary holds catalogue ids only; prices and availability
 // are read from the supplier tables whenever the trip is shown.
 model Trip {
-  id           String   @id @default(uuid())
-  userId       String
-  generationId String?  @unique
-  title        String
-  destination  String
-  startDate    DateTime @db.Date
-  endDate      DateTime @db.Date
-  budget       Float?
-  currency     String   @default("SGD")
-  party        Json     // [{ name, age }] at planning time
-  preferences  Json?
-  itinerary    Json
+  id            String   @id @default(uuid())
+  userId        String
+  generationId  String?  @unique
+  title         String
+  destination   String
+  startDate     DateTime @db.Date
+  endDate       DateTime @db.Date
+  budget        Float?
+  currency      String   @default("SGD")
+  party         Json // [{ name, age }] at planning time
+  preferences   Json?
+  itinerary     Json
   // Random public link code. Null means the trip is private; clearing it revokes old links.
-  shareId      String?  @unique
+  shareId       String?  @unique
   // Community trip this one was customized from, kept for attribution
   adaptedFromId String?
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 
   user        User           @relation(fields: [userId], references: [id], onDelete: Cascade)
   adaptedFrom PublishedTrip? @relation("AdaptedTrips", fields: [adaptedFromId], references: [id], onDelete: SetNull)
@@ -669,12 +427,12 @@ model Trip {
 model ItineraryGeneration {
   id           String   @id @default(uuid())
   userId       String?
-  clientKey    String   // user id, or a salted hash of the guest's IP
+  clientKey    String // user id, or a salted hash of the guest's IP
   destination  String
   request      Json
   itinerary    Json?
   model        String
-  status       String   // SUCCESS, REFUSED, FAILED
+  status       String // SUCCESS, REFUSED, FAILED
   inputTokens  Int?
   outputTokens Int?
   // Community trip used as the starting plan ("Customize with AI")
@@ -688,7 +446,6 @@ model ItineraryGeneration {
   @@index([sourceTripId])
   @@map("itinerary_generations")
 }
-
 
 // Messages from the contact form. Stored so a failed email doesn't lose them.
 model ContactMessage {
