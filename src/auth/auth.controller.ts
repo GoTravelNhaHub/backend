@@ -15,6 +15,10 @@ const withError = (target: string, code: string) => {
   return url.toString()
 }
 
+// Marks a sign-in restarted after an expired state, so a second expiry ends in an error rather than a loop.
+// It travels in the OAuth `state` because the login cookie may be the thing that is missing.
+const RETRY_STATE_SUFFIX = '.retry'
+
 @ApiTags('auth')
 @Controller()
 export class AuthController {
@@ -27,15 +31,17 @@ export class AuthController {
   @ApiQuery({ name: 'register', required: false, description: '`1` opens the registration page' })
   @ApiQuery({ name: 'ref', required: false, description: 'Referral code credited when a new account is created' })
   @ApiQuery({ name: 'locale', required: false, enum: ['en', 'vi', 'zh'] })
+  @ApiQuery({ name: 'retry', required: false, description: 'Set by /auth/callback when it restarts an expired sign-in' })
   async login(
     @Res() res: Response,
     @Query('redirect') redirect?: string,
     @Query('register') register?: string,
     @Query('ref') ref?: string,
-    @Query('locale') locale?: string
+    @Query('locale') locale?: string,
+    @Query('retry') retry?: string
   ) {
     const { verifier, challenge } = createPkce()
-    const state = randomToken()
+    const state = randomToken() + (retry === '1' ? RETRY_STATE_SUFFIX : '')
     const nonce = randomToken()
     await setLoginState(res, {
       state,
@@ -61,6 +67,11 @@ export class AuthController {
       return res.redirect(302, withError(target, String(query.error)))
     }
     if (!login || typeof query.code !== 'string' || query.state !== login.state) {
+      // Usually a stale Keycloak tab, the back button, or a sign-in started in another tab. Start a
+      // fresh one once: Keycloak still has its SSO session, so the visitor normally sees no page
+      if (!String(query.state ?? '').endsWith(RETRY_STATE_SUFFIX)) {
+        return res.redirect(302, `/auth/login?${new URLSearchParams({ redirect: target, retry: '1' })}`)
+      }
       return res.redirect(302, withError(target, 'expired'))
     }
 
