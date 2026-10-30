@@ -21,6 +21,8 @@ import { publicationsIdDelete } from './handlers/publications-id.delete'
 import { publicationsIdPatch } from './handlers/publications-id.patch'
 import { tripsSlugGet } from './handlers/trips-slug.get'
 import { tripsSlugBookingOptionsGet } from './handlers/trips-slug-booking-options.get'
+import { tripsSlugMapGet } from './handlers/trips-slug-map.get'
+import { tripsSlugPartnerLinksGet } from './handlers/trips-slug-partner-links.get'
 import { tripsSlugCommentsGet } from './handlers/trips-slug-comments.get'
 import { tripsSlugCommentsPost } from './handlers/trips-slug-comments.post'
 import { tripsSlugSaveDelete } from './handlers/trips-slug-save.delete'
@@ -111,6 +113,14 @@ export class CommunityService {
 
   tripsSlugBookingOptionsGet(event: HttpEvent) {
     return tripsSlugBookingOptionsGet(event)
+  }
+
+  tripsSlugMapGet(event: HttpEvent) {
+    return tripsSlugMapGet(event)
+  }
+
+  tripsSlugPartnerLinksGet(event: HttpEvent) {
+    return tripsSlugPartnerLinksGet(event)
   }
 
   tripsSlugCommentsGet(event: HttpEvent) {

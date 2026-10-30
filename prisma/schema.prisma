@@ -573,6 +573,7 @@ model PublishedTrip {
   generations  ItineraryGeneration[]
   saves        SavedTrip[]
   comments     TripComment[]
+  map          TripMapCache?
 
   @@index([visibility, status, publishedAt(sort: Desc)])
   @@index([visibility, status, saveCount(sort: Desc)])
@@ -654,4 +655,50 @@ model ContentReport {
   @@index([status, createdAt])
   @@index([targetType, targetId])
   @@map("content_reports")
+}
+
+// Map pins for a published trip: the place each stop refers to and its coordinates.
+// Worked out once per itinerary version (`hash`) and rebuilt when the author republishes.
+model TripMapCache {
+  tripId    String   @id
+  hash      String
+  data      Json
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  trip PublishedTrip @relation(fields: [tripId], references: [id], onDelete: Cascade)
+
+  @@map("trip_map_caches")
+}
+
+// OpenStreetMap (Nominatim) lookups, kept so each place is geocoded once (their usage policy asks for caching).
+// lat/lon null: the place was not found inside the city.
+model PlaceLookup {
+  // "<place>|<city>", lower case
+  key       String   @id
+  query     String
+  city      String
+  lat       Float?
+  lon       Float?
+  label     String?
+  createdAt DateTime @default(now())
+
+  @@map("place_lookups")
+}
+
+// Partner product pages (Klook, Trip.com) found for a trip stop by AI web search.
+// url null: nothing reliable was found, so the stop keeps a partner search link.
+model PartnerLink {
+  // "<provider>|<query>", lower case
+  key       String   @id
+  provider  String
+  query     String
+  url       String?
+  title     String?
+  // Klook only: a short search that returned related listings; null when Klook has nothing related
+  search    String?
+  checkedAt DateTime @default(now())
+
+  @@index([checkedAt])
+  @@map("partner_links")
 }

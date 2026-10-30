@@ -185,6 +185,20 @@ export class CommunityController {
     return send(res, this.service.tripsSlugBookingOptionsGet(toEvent(req, res)))
   }
 
+  @Get("api/community/trips/:slug/map")
+  @ApiOperation({ summary: "Map pins for a trip's stops: AI-named places geocoded with OpenStreetMap, cached per itinerary version." })
+  @ApiParam({ name: "slug" })
+  tripsSlugMapGet(@Req() req: Request, @Res() res: Response) {
+    return send(res, this.service.tripsSlugMapGet(toEvent(req, res)))
+  }
+
+  @Get("api/community/trips/:slug/partner-links")
+  @ApiOperation({ summary: "Klook or Trip.com product pages found by AI web search for the trip's stops, keyed by search query. Affiliate ids are added by /api/affiliate/click." })
+  @ApiParam({ name: "slug" })
+  tripsSlugPartnerLinksGet(@Req() req: Request, @Res() res: Response) {
+    return send(res, this.service.tripsSlugPartnerLinksGet(toEvent(req, res)))
+  }
+
   @Get("api/community/trips/:slug/comments")
   @ApiOperation({ summary: "Comments on a public or unlisted trip, newest first. Marks the viewer's own comments, so never cached." })
   @ApiParam({ name: "slug" })
